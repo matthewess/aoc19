@@ -1,5 +1,6 @@
-module IntCodeInterpreter where
+{-# LANGUAGE RecordWildCards #-}
 
+module IntCodeInterpreter where
 
 import Data.Map hiding (map)
 import Prelude hiding ((!!))
@@ -11,6 +12,8 @@ import Control.Arrow ((&&&))
 data IntCode = IntCode
     { _map :: Map Integer Integer
     , currentIndex :: Integer
+    , inputStrip :: [Integer]
+    , outputStrip :: [Integer]
     }
 
 
@@ -18,6 +21,8 @@ initIntCode :: [Integer] -> IntCode
 initIntCode xs = IntCode
     { _map = fromList $ zip [0,1..] xs
     , currentIndex = 0
+    , inputStrip = [1] -- hard coded
+    , outputStrip = []
     }
 
 
@@ -30,9 +35,11 @@ values = elems . _map
 
 
 updateIntMap :: IntCode -> Integer -> Integer -> Integer -> IntCode
-updateIntMap intMap resultIndex result currentIdx = IntCode
-    { _map = update (\_ -> Just result) resultIndex $ _map intMap
+updateIntMap IntCode{..} resultIndex result currentIdx = IntCode
+    { _map = update (\_ -> Just result) resultIndex $ _map
     , currentIndex = currentIdx
+    , inputStrip = inputStrip
+    , outputStrip = outputStrip
     }
 
 
@@ -49,7 +56,7 @@ process intMap
         indices = (idx + 1, idx + 2, idx + 3)
         firstNumber = intMap !! (intMap !! (idx + 1))
         secondNumber = intMap !! (intMap !! (idx + 2))
-        resultIndex = intMap !! (idx+3)
+        resultIndex = intMap !! (idx + 3)
         updatedIndex = idx + 4
         add = updateIntMap intMap resultIndex (firstNumber + secondNumber) updatedIndex
         mult = updateIntMap intMap resultIndex (firstNumber * secondNumber) updatedIndex
