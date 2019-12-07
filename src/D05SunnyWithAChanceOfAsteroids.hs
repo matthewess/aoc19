@@ -8,8 +8,8 @@ import IntCodeInterpreter (processOutputWithICI)
 p1 :: [Int] -> [Int]
 p1 = processOutputWithICI [1]
 
-p2 :: [Int] -> Int
-p2 _ = 2
+p2 :: [Int] -> [Int]
+p2 = processOutputWithICI [5]
 
 
 main :: IO ()
