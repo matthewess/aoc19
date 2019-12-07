@@ -8,11 +8,12 @@ import Control.Arrow ((&&&))
 
 
 -- Makeshift Mutable array
-data ParameterMode = Position deriving (Show, Eq)
+data ParameterMode = Position | Immediate deriving (Show, Eq)
 
 
 toParameterMode :: Char -> ParameterMode
 toParameterMode '0' = Position
+toParameterMode '1' = Immediate
 toParameterMode _   = error "Incorrect Parameter Mode"
 
 
@@ -64,6 +65,7 @@ ic !!! idx = _map ic ! idx
 
 getValue :: ParameterMode -> IntCode -> Int -> Int
 getValue Position ic idx = ic !!! (ic !!! idx)
+getValue Immediate ic idx = ic !!! idx
 
 
 values :: IntCode -> [Int]
@@ -84,14 +86,12 @@ getInstruction o ic =
     let
         idx =  currentIndex ic
         operation = toOperation (ic !!! idx)
-        firstNumber = getValue Position ic (idx + 1)
-        secondNumber = getValue Position ic (idx + 2)
     in
         case operation of 
             Add pm1 pm2 ->
-                IAdd firstNumber secondNumber (ic !!! (idx + 3))
+                IAdd (getValue pm1 ic (idx+1)) (getValue pm2 ic (idx+2)) (ic !!! (idx + 3))
             Mult pm1 pm2 ->
-                IMult firstNumber secondNumber (ic !!! (idx + 3))
+                IMult (getValue pm1 ic (idx+1)) (getValue pm2 ic (idx+2)) (ic !!! (idx + 3))
             ReadFromInput ->
                 IInput (ic !!! (idx + 1))
             WriteToOutput ->
@@ -129,11 +129,11 @@ executeInstruction IHalt ic = error "This method should not be called on Halt"
 
 
 
-initIntCode :: [Int] -> IntCode
-initIntCode xs = IntCode
-    { _map = fromList $ zip [0,1..] xs
+initIntCode :: [Int] -> [Int] -> IntCode
+initIntCode inp icStrip = IntCode
+    { _map = fromList $ zip [0,1..] icStrip
     , currentIndex = 0
-    , inputStrip = [1] -- hard coded
+    , inputStrip = inp
     , outputStrip = []
     }
 
@@ -154,5 +154,5 @@ process intMap =
         
 
 -- Interface to the outside world
-processWithICI :: [Int] -> [Int]
-processWithICI = values . process . initIntCode
+processWithICI :: [Int] -> [Int] -> [Int]
+processWithICI ys = values . process . initIntCode ys

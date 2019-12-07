@@ -15,7 +15,7 @@ replaceOldState _ _ _ = error "Incorrect input"
 
 
 p1 :: [Int] -> Int
-p1 = head . processWithICI . replaceOldState 12 2
+p1 = head . processWithICI [] . replaceOldState 12 2
 
 
 -- Part II
@@ -23,7 +23,7 @@ p1 = head . processWithICI . replaceOldState 12 2
 p2 :: [Int] -> Int
 p2 xs = 
     let
-        f noun verb = head . processWithICI . replaceOldState noun verb $ xs
+        f noun verb = head . processWithICI [] . replaceOldState noun verb $ xs
         allNounVerbPairs =  (,) <$> [0,1..99] <*> [0,1..99]
         combine (noun, verb) = 100 * noun + verb
     in
