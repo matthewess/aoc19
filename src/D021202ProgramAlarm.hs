@@ -9,18 +9,18 @@ import IntCodeInterpreter (processWithICI)
 
 -- Part I
 
-replaceOldState :: Integer -> Integer -> [Integer] -> [Integer]
+replaceOldState :: Int -> Int -> [Int] -> [Int]
 replaceOldState noun verb (x0:_:_:xs) = x0 : noun : verb : xs
 replaceOldState _ _ _ = error "Incorrect input"
 
 
-p1 :: [Integer] -> Integer
+p1 :: [Int] -> Int
 p1 = head . processWithICI . replaceOldState 12 2
 
 
 -- Part II
 
-p2 :: [Integer] -> Integer
+p2 :: [Int] -> Int
 p2 xs = 
     let
         f noun verb = head . processWithICI . replaceOldState noun verb $ xs

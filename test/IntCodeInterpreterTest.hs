@@ -1,6 +1,11 @@
 module IntCodeInterpreterTest where
 
-import IntCodeInterpreter (processWithICI)
+import IntCodeInterpreter
+    ( processWithICI
+    , Operation(..)
+    , ParameterMode(..)
+    , toOperation
+    )
 
 import Test.HUnit
 
@@ -13,5 +18,9 @@ testIntCode =
     ]
 
 
+testToOperation =
+    [ TestLabel "" $ TestCase $ assertEqual "toInstruction 1002" (Mult Position Position) (toOperation 2)
+    ]
+
 intCodeTests :: [Test]
-intCodeTests = testIntCode
+intCodeTests = testIntCode ++ testToOperation
