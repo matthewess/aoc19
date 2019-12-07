@@ -19,6 +19,8 @@ toParameterMode _   = error "Incorrect Parameter Mode"
 data Operation
     = Add ParameterMode ParameterMode
     | Mult ParameterMode ParameterMode
+    | ReadFromInput
+    | WriteToOutput
     | Halt
     deriving (Show, Eq)
 
@@ -34,12 +36,16 @@ toOperation i =
         case oc of
             1  -> Add (pms !! 0) (pms !! 1)
             2  -> Mult (pms !! 0) (pms !! 1)
+            3 -> ReadFromInput
+            4 -> WriteToOutput
             99 -> Halt
 
 
 data Instruction
     = IAdd Int Int Int
     | IMult Int Int Int
+    | IInput Int
+    | IOutput Int
     | IHalt
     deriving (Show, Eq)
 
@@ -80,13 +86,16 @@ getInstruction o ic =
         operation = toOperation (ic !!! idx)
         firstNumber = getValue Position ic (idx + 1)
         secondNumber = getValue Position ic (idx + 2)
-        resultIndex = ic !!! (idx + 3)
     in
         case operation of 
             Add pm1 pm2 ->
-                IAdd firstNumber secondNumber resultIndex
+                IAdd firstNumber secondNumber (ic !!! (idx + 3))
             Mult pm1 pm2 ->
-                IMult firstNumber secondNumber resultIndex
+                IMult firstNumber secondNumber (ic !!! (idx + 3))
+            ReadFromInput ->
+                IInput (ic !!! (idx + 1))
+            WriteToOutput ->
+                IOutput (ic !!! (idx + 1))
             Halt ->
                 IHalt
 
@@ -103,6 +112,18 @@ executeInstruction (IMult p1 p2 ri) IntCode{..} = IntCode
     , currentIndex = currentIndex + 4
     , inputStrip = inputStrip
     , outputStrip = outputStrip
+    }
+executeInstruction (IInput ri) IntCode{..} = IntCode
+    { _map = update (\_ -> Just (head inputStrip)) ri _map
+    , currentIndex = currentIndex + 2
+    , inputStrip = tail inputStrip
+    , outputStrip = outputStrip
+    }
+executeInstruction (IOutput ri) IntCode{..} = IntCode
+    { _map = _map
+    , currentIndex = currentIndex + 2
+    , inputStrip = inputStrip
+    , outputStrip = (_map ! ri) : outputStrip
     }
 executeInstruction IHalt ic = error "This method should not be called on Halt"
 
