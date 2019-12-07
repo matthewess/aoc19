@@ -4,8 +4,11 @@ import Data.Map hiding (map)
 import Prelude hiding ((!!))
 import Data.List.Split (splitOn)
 import Control.Arrow ((&&&))
-import IntCodeInterpreter (processWithICI)
+import IntCodeInterpreter (values, process, initIntCode)
 
+
+processWithICI :: [Int] -> [Int] -> [Int]
+processWithICI ys = values . process . initIntCode ys
 
 -- Part I
 

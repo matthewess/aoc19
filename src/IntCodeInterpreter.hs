@@ -197,10 +197,3 @@ process intMap =
                 process $ executeInstruction i intMap
         
 
--- Interface to the outside world
-processWithICI :: [Int] -> [Int] -> [Int]
-processWithICI ys = values . process . initIntCode ys
-
-
-processOutputWithICI :: [Int] -> [Int] -> [Int]
-processOutputWithICI ys = outputStrip . process . initIntCode ys
