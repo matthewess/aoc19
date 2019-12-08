@@ -63,11 +63,14 @@ data Instruction
     deriving (Show, Eq)
 
 
+data Mode = Process | Output | Halted deriving (Show, Eq)
+
 data IntCode = IntCode
     { _map :: Map Int Int
     , currentIndex :: Int
     , inputStrip :: [Int]
     , outputStrip :: [Int]
+    , mode :: Mode
     }
 
 
@@ -115,35 +118,45 @@ executeInstruction :: Instruction -> IntCode -> IntCode
 executeInstruction (IAdd p1 p2 ri) ic@IntCode{..} = ic
     { _map = update (\_ -> Just (p1 + p2)) ri _map
     , currentIndex = currentIndex + 4
+    , mode = Process
     }
 executeInstruction (IMult p1 p2 ri) ic@IntCode{..} = ic
     { _map = update (\_ -> Just (p1 * p2)) ri _map
     , currentIndex = currentIndex + 4
+    , mode = Process
     }
 executeInstruction (IInput ri) ic@IntCode{..} = ic
     { _map = update (\_ -> Just (head inputStrip)) ri _map
     , currentIndex = currentIndex + 2
     , inputStrip = tail inputStrip
+    , mode = Process
     }
 executeInstruction (IOutput ri) ic@IntCode{..} = ic
     { currentIndex = currentIndex + 2
     , outputStrip = (_map ! ri) : outputStrip
+    , mode = Output
     }
 executeInstruction (IJumpIfTrue p1 p2) ic@IntCode{..} = ic
     { currentIndex = if p1 /= 0 then p2 else (currentIndex + 3)
+    , mode = Process
     }
 executeInstruction (IJumpIfFalse p1 p2) ic@IntCode{..} = ic
     { currentIndex = if p1 == 0 then p2 else (currentIndex + 3)
+    , mode = Process
     }
 executeInstruction (ILessThan p1 p2 ri) ic@IntCode{..} = ic
     { _map = update (\_ -> Just (if p1 < p2 then 1 else 0)) ri _map
     , currentIndex = currentIndex + 4
+    , mode = Process
     }
 executeInstruction (IEquals p1 p2 ri) ic@IntCode{..} = ic
     { _map = update (\_ -> Just (if p1 == p2 then 1 else 0)) ri _map
     , currentIndex = currentIndex + 4
+    , mode = Process
     }
-executeInstruction IHalt ic = error "Can't call Halt"
+executeInstruction IHalt ic = ic
+    { mode = Halted
+    }
 
 
 
@@ -153,6 +166,7 @@ initIntCode inp icStrip = IntCode
     , currentIndex = 0
     , inputStrip = inp
     , outputStrip = []
+    , mode = Process
     }
 
 
@@ -163,9 +177,8 @@ process intMap =
         idx =  currentIndex intMap
         operation = toOperation (intMap !!! idx)
         instruction = getInstruction operation intMap
+        ic = executeInstruction instruction intMap
     in
-        case instruction of 
-            IHalt ->
-                intMap
-            i ->
-                process $ executeInstruction i intMap
+        case mode ic of 
+            Halted -> ic
+            otherwise -> process $ ic
