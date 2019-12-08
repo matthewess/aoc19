@@ -84,15 +84,6 @@ values :: IntCode -> [Int]
 values = elems . _map
 
 
-updateIntMap :: IntCode -> Int -> Int -> Int -> IntCode
-updateIntMap IntCode{..} resultIndex result currentIdx = IntCode
-    { _map = update (\_ -> Just result) resultIndex $ _map
-    , currentIndex = currentIdx
-    , inputStrip = inputStrip
-    , outputStrip = outputStrip
-    }
-
-
 getInstruction :: Operation -> IntCode -> Instruction
 getInstruction o ic =
     let
@@ -121,55 +112,38 @@ getInstruction o ic =
 
 
 executeInstruction :: Instruction -> IntCode -> IntCode
-executeInstruction (IAdd p1 p2 ri) IntCode{..} = IntCode
+executeInstruction (IAdd p1 p2 ri) ic@IntCode{..} = ic
     { _map = update (\_ -> Just (p1 + p2)) ri _map
     , currentIndex = currentIndex + 4
-    , inputStrip = inputStrip
-    , outputStrip = outputStrip
     }
-executeInstruction (IMult p1 p2 ri) IntCode{..} = IntCode
+executeInstruction (IMult p1 p2 ri) ic@IntCode{..} = ic
     { _map = update (\_ -> Just (p1 * p2)) ri _map
     , currentIndex = currentIndex + 4
-    , inputStrip = inputStrip
-    , outputStrip = outputStrip
     }
-executeInstruction (IInput ri) IntCode{..} = IntCode
+executeInstruction (IInput ri) ic@IntCode{..} = ic
     { _map = update (\_ -> Just (head inputStrip)) ri _map
     , currentIndex = currentIndex + 2
     , inputStrip = tail inputStrip
-    , outputStrip = outputStrip
     }
-executeInstruction (IOutput ri) IntCode{..} = IntCode
-    { _map = _map
-    , currentIndex = currentIndex + 2
-    , inputStrip = inputStrip
+executeInstruction (IOutput ri) ic@IntCode{..} = ic
+    { currentIndex = currentIndex + 2
     , outputStrip = (_map ! ri) : outputStrip
     }
-executeInstruction (IJumpIfTrue p1 p2) IntCode{..} = IntCode
-    { _map = _map
-    , currentIndex = if p1 /= 0 then p2 else (currentIndex + 3)
-    , inputStrip = inputStrip
-    , outputStrip = outputStrip
+executeInstruction (IJumpIfTrue p1 p2) ic@IntCode{..} = ic
+    { currentIndex = if p1 /= 0 then p2 else (currentIndex + 3)
     }
-executeInstruction (IJumpIfFalse p1 p2) IntCode{..} = IntCode
-    { _map = _map
-    , currentIndex = if p1 == 0 then p2 else (currentIndex + 3)
-    , inputStrip = inputStrip
-    , outputStrip = outputStrip
+executeInstruction (IJumpIfFalse p1 p2) ic@IntCode{..} = ic
+    { currentIndex = if p1 == 0 then p2 else (currentIndex + 3)
     }
-executeInstruction (ILessThan p1 p2 ri) IntCode{..} = IntCode
+executeInstruction (ILessThan p1 p2 ri) ic@IntCode{..} = ic
     { _map = update (\_ -> Just (if p1 < p2 then 1 else 0)) ri _map
     , currentIndex = currentIndex + 4
-    , inputStrip = inputStrip
-    , outputStrip = outputStrip
     }
-executeInstruction (IEquals p1 p2 ri) IntCode{..} = IntCode
+executeInstruction (IEquals p1 p2 ri) ic@IntCode{..} = ic
     { _map = update (\_ -> Just (if p1 == p2 then 1 else 0)) ri _map
     , currentIndex = currentIndex + 4
-    , inputStrip = inputStrip
-    , outputStrip = outputStrip
     }
-executeInstruction IHalt ic = error "This method should not be called on Halt"
+executeInstruction IHalt ic = error "Can't call Halt"
 
 
 
@@ -195,5 +169,3 @@ process intMap =
                 intMap
             i ->
                 process $ executeInstruction i intMap
-        
-
