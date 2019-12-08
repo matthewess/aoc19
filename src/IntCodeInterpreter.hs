@@ -2,9 +2,11 @@
 
 module IntCodeInterpreter where
 
-import Data.Map hiding (map)
+import qualified Data.Map as M
 import Data.List.Split (splitOn)
+import Data.List (null)
 import Control.Arrow ((&&&))
+import Data.Maybe (listToMaybe)
 
 
 -- Makeshift Mutable array
@@ -63,19 +65,19 @@ data Instruction
     deriving (Show, Eq)
 
 
-data Mode = Process | Output | Halted deriving (Show, Eq)
+data Mode = Process | WaitingForInput | Halted deriving (Show, Eq)
 
 data IntCode = IntCode
-    { _map :: Map Int Int
+    { _map :: M.Map Int Int
     , currentIndex :: Int
     , inputStrip :: [Int]
     , outputStrip :: [Int]
     , mode :: Mode
-    }
+    } deriving (Show, Eq)
 
 
 (!!!) :: IntCode -> Int -> Int
-ic !!! idx = _map ic ! idx
+ic !!! idx = _map ic M.! idx
 
 
 getValue :: ParameterMode -> IntCode -> Int -> Int
@@ -84,7 +86,7 @@ getValue Immediate ic idx = ic !!! idx
 
 
 values :: IntCode -> [Int]
-values = elems . _map
+values = M.elems . _map
 
 
 getInstruction :: Operation -> IntCode -> Instruction
@@ -116,25 +118,29 @@ getInstruction o ic =
 
 executeInstruction :: Instruction -> IntCode -> IntCode
 executeInstruction (IAdd p1 p2 ri) ic@IntCode{..} = ic
-    { _map = update (\_ -> Just (p1 + p2)) ri _map
+    { _map = M.update (\_ -> Just (p1 + p2)) ri _map
     , currentIndex = currentIndex + 4
     , mode = Process
     }
 executeInstruction (IMult p1 p2 ri) ic@IntCode{..} = ic
-    { _map = update (\_ -> Just (p1 * p2)) ri _map
+    { _map = M.update (\_ -> Just (p1 * p2)) ri _map
     , currentIndex = currentIndex + 4
     , mode = Process
     }
-executeInstruction (IInput ri) ic@IntCode{..} = ic
-    { _map = update (\_ -> Just (head inputStrip)) ri _map
-    , currentIndex = currentIndex + 2
-    , inputStrip = tail inputStrip
-    , mode = Process
-    }
+executeInstruction (IInput ri) ic@IntCode{..} =
+    if null inputStrip then
+        ic {mode = WaitingForInput}
+    else
+        ic
+            { _map = M.update (\_ -> Just (head $ inputStrip)) ri _map
+            , currentIndex = currentIndex + 2
+            , inputStrip = tail inputStrip
+            , mode = Process
+            }
 executeInstruction (IOutput ri) ic@IntCode{..} = ic
     { currentIndex = currentIndex + 2
-    , outputStrip = (_map ! ri) : outputStrip
-    , mode = Output
+    , outputStrip = (_map M.! ri) : outputStrip
+    , mode = Process
     }
 executeInstruction (IJumpIfTrue p1 p2) ic@IntCode{..} = ic
     { currentIndex = if p1 /= 0 then p2 else (currentIndex + 3)
@@ -145,12 +151,12 @@ executeInstruction (IJumpIfFalse p1 p2) ic@IntCode{..} = ic
     , mode = Process
     }
 executeInstruction (ILessThan p1 p2 ri) ic@IntCode{..} = ic
-    { _map = update (\_ -> Just (if p1 < p2 then 1 else 0)) ri _map
+    { _map = M.update (\_ -> Just (if p1 < p2 then 1 else 0)) ri _map
     , currentIndex = currentIndex + 4
     , mode = Process
     }
 executeInstruction (IEquals p1 p2 ri) ic@IntCode{..} = ic
-    { _map = update (\_ -> Just (if p1 == p2 then 1 else 0)) ri _map
+    { _map = M.update (\_ -> Just (if p1 == p2 then 1 else 0)) ri _map
     , currentIndex = currentIndex + 4
     , mode = Process
     }
@@ -162,7 +168,7 @@ executeInstruction IHalt ic = ic
 
 initIntCode :: [Int] -> [Int] -> IntCode
 initIntCode inp icStrip = IntCode
-    { _map = fromList $ zip [0,1..] icStrip
+    { _map = M.fromList $ zip [0,1..] icStrip
     , currentIndex = 0
     , inputStrip = inp
     , outputStrip = []
@@ -181,4 +187,13 @@ process intMap =
     in
         case mode ic of 
             Halted -> ic
+            WaitingForInput -> ic
             otherwise -> process $ ic
+
+
+appendToInput :: IntCode -> [Int] -> IntCode
+appendToInput ic@IntCode{..} i = ic {inputStrip = inputStrip ++ i}
+
+
+flushOutput :: IntCode -> IntCode
+flushOutput ic@IntCode{..} = ic {outputStrip = []}
