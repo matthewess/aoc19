@@ -9,11 +9,21 @@ import D05SunnyWithAChanceOfAsteroidsTest (d05Tests)
 import D06UniversalOrbitMapTest (d06Tests)
 import D07AmplificatoinCircuitTest (d07Tests)
 import D08SpaceImageFormatTest (d08Tests)
+import D09SensorBoostTest (d09Tests)
 
 
 allTests :: Test
 allTests = TestList $
-    intCodeTests ++ d01Tests ++ d02Tests ++ d03Tests ++ d04Tests ++ d05Tests ++ d06Tests ++ d07Tests ++ d08Tests
+    intCodeTests
+    ++ d01Tests
+    ++ d02Tests
+    ++ d03Tests
+    ++ d04Tests
+    ++ d05Tests
+    ++ d06Tests
+    ++ d07Tests
+    ++ d08Tests
+    ++ d09Tests
     
 
 main :: IO Counts
