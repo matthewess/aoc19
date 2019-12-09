@@ -8,7 +8,6 @@ import IntCodeInterpreter
     , toOperation
     , initIntCode
     , getValue
-    , getInstruction
     , executeInstruction
     )
 
@@ -38,17 +37,11 @@ testGetValue =
     ]
 
 
-testGetInstruction =
-    [ TestLabel "" $ TestCase $ assertEqual "" (IMult 99 99 5) (getInstruction (Mult Position Position) ic1)
-    , TestLabel "" $ TestCase $ assertEqual "" (IAdd 99 99 5) (getInstruction (Add Position Position) ic1)
-    , TestLabel "" $ TestCase $ assertEqual "" (IHalt) (getInstruction Halt ic1)
-    ]
-
 
 testExecuteInstruction =
-    [ TestLabel "" $ TestCase $ assertEqual "" (ic1 { _map = asMap [2,4,4,5,99,9801], currentIndex = 4}) (executeInstruction (IMult 99 99 5) ic1)
-    , TestLabel "" $ TestCase $ assertEqual "" (ic2 {_map = asMap [2,0,0,0,99], currentIndex = 4}) (executeInstruction (IAdd 1 1 0) ic2)
-    , TestLabel "" $ TestCase $ assertEqual "" (ic3 {_map = asMap [3,9,8,9,10,9,4,9,99,8,8], currentIndex = 2, inputStrip = []}) (executeInstruction (IInput 9) ic3)
+    [ TestLabel "" $ TestCase $ assertEqual "" (ic1 { _map = asMap [2,4,4,5,99,9801], currentIndex = 4}) (executeInstruction (Mult Position Position) ic1)
+    , TestLabel "" $ TestCase $ assertEqual "" (ic2 {_map = asMap [2,0,0,0,99], currentIndex = 4}) (executeInstruction (Add Position Position) ic2)
+    , TestLabel "" $ TestCase $ assertEqual "" (ic3 {_map = asMap [3,9,8,9,10,9,4,9,99,8,8], currentIndex = 2, inputStrip = []}) (executeInstruction (ReadFromInput) ic3)
     ]
     
 

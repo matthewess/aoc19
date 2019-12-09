@@ -89,45 +89,24 @@ values :: IntCode -> [Int]
 values = M.elems . _map
 
 
-getInstruction :: Operation -> IntCode -> Instruction
-getInstruction o ic =
-    let
-        idx =  currentIndex ic
-        operation = toOperation (ic !!! idx)
-    in
-        case operation of 
-            Add pm1 pm2 ->
-                IAdd (getValue pm1 ic (idx+1)) (getValue pm2 ic (idx+2)) (ic !!! (idx + 3))
-            Mult pm1 pm2 ->
-                IMult (getValue pm1 ic (idx+1)) (getValue pm2 ic (idx+2)) (ic !!! (idx + 3))
-            ReadFromInput ->
-                IInput (ic !!! (idx + 1))
-            WriteToOutput ->
-                IOutput (ic !!! (idx + 1))
-            JumpIfTrue pm1 pm2 ->
-                IJumpIfTrue (getValue pm1 ic (idx+1)) (getValue pm2 ic (idx+2))
-            JumpIfFalse pm1 pm2 ->
-                IJumpIfFalse (getValue pm1 ic (idx+1)) (getValue pm2 ic (idx+2))
-            LessThan pm1 pm2 ->
-                ILessThan (getValue pm1 ic (idx+1)) (getValue pm2 ic (idx+2)) (ic !!! (idx + 3))
-            Equals pm1 pm2 ->
-                IEquals (getValue pm1 ic (idx+1)) (getValue pm2 ic (idx+2)) (ic !!! (idx + 3))
-            Halt ->
-                IHalt
-
-
-executeInstruction :: Instruction -> IntCode -> IntCode
-executeInstruction (IAdd p1 p2 ri) ic@IntCode{..} = ic
+executeInstruction :: Operation -> IntCode -> IntCode
+executeInstruction (Add pm1 pm2) ic@IntCode{..} = ic
     { _map = M.update (\_ -> Just (p1 + p2)) ri _map
     , currentIndex = currentIndex + 4
     , mode = Process
-    }
-executeInstruction (IMult p1 p2 ri) ic@IntCode{..} = ic
+    } where
+        p1 = getValue pm1 ic (currentIndex + 1)
+        p2 = getValue pm2 ic (currentIndex + 2)
+        ri = (ic !!! (currentIndex + 3))
+executeInstruction (Mult pm1 pm2) ic@IntCode{..} = ic
     { _map = M.update (\_ -> Just (p1 * p2)) ri _map
     , currentIndex = currentIndex + 4
     , mode = Process
-    }
-executeInstruction (IInput ri) ic@IntCode{..} =
+    } where
+        p1 = getValue pm1 ic (currentIndex + 1)
+        p2 = getValue pm2 ic (currentIndex + 2)
+        ri = (ic !!! (currentIndex + 3))
+executeInstruction ReadFromInput ic@IntCode{..} =
     if null inputStrip then
         ic {mode = WaitingForInput}
     else
@@ -137,30 +116,41 @@ executeInstruction (IInput ri) ic@IntCode{..} =
             , inputStrip = tail inputStrip
             , mode = Process
             }
-executeInstruction (IOutput ri) ic@IntCode{..} = ic
+    where ri = (ic !!! (currentIndex + 1))
+executeInstruction WriteToOutput ic@IntCode{..} = ic
     { currentIndex = currentIndex + 2
     , outputStrip = (_map M.! ri) : outputStrip
     , mode = Process
-    }
-executeInstruction (IJumpIfTrue p1 p2) ic@IntCode{..} = ic
+    } where ri = ic !!! (currentIndex + 1)
+executeInstruction (JumpIfTrue pm1 pm2) ic@IntCode{..} = ic
     { currentIndex = if p1 /= 0 then p2 else (currentIndex + 3)
     , mode = Process
-    }
-executeInstruction (IJumpIfFalse p1 p2) ic@IntCode{..} = ic
+    } where
+        p1 = getValue pm1 ic (currentIndex + 1)
+        p2 = getValue pm2 ic (currentIndex + 2)
+executeInstruction (JumpIfFalse pm1 pm2) ic@IntCode{..} = ic
     { currentIndex = if p1 == 0 then p2 else (currentIndex + 3)
     , mode = Process
-    }
-executeInstruction (ILessThan p1 p2 ri) ic@IntCode{..} = ic
+    } where
+        p1 = getValue pm1 ic (currentIndex + 1)
+        p2 = getValue pm2 ic (currentIndex + 2)
+executeInstruction (LessThan pm1 pm2) ic@IntCode{..} = ic
     { _map = M.update (\_ -> Just (if p1 < p2 then 1 else 0)) ri _map
     , currentIndex = currentIndex + 4
     , mode = Process
-    }
-executeInstruction (IEquals p1 p2 ri) ic@IntCode{..} = ic
+    } where
+        p1 = getValue pm1 ic (currentIndex + 1)
+        p2 = getValue pm2 ic (currentIndex + 2)
+        ri = (ic !!! (currentIndex + 3))
+executeInstruction (Equals pm1 pm2) ic@IntCode{..} = ic
     { _map = M.update (\_ -> Just (if p1 == p2 then 1 else 0)) ri _map
     , currentIndex = currentIndex + 4
     , mode = Process
-    }
-executeInstruction IHalt ic = ic
+    } where
+        p1 = getValue pm1 ic (currentIndex + 1)
+        p2 = getValue pm2 ic (currentIndex + 2)
+        ri = (ic !!! (currentIndex + 3))
+executeInstruction Halt ic = ic
     { mode = Halted
     }
 
@@ -182,8 +172,8 @@ process intMap =
     let
         idx =  currentIndex intMap
         operation = toOperation (intMap !!! idx)
-        instruction = getInstruction operation intMap
-        ic = executeInstruction instruction intMap
+        -- instruction = getInstruction operation intMap
+        ic = executeInstruction operation intMap
     in
         case mode ic of 
             Halted -> ic
