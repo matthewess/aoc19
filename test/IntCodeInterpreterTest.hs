@@ -3,7 +3,6 @@ module IntCodeInterpreterTest where
 import IntCodeInterpreter
     ( Operation(..)
     , ParameterMode(..)
-    , Instruction(..)
     , IntCode(..)
     , toOperation
     , initIntCode
@@ -17,8 +16,8 @@ import Test.HUnit
 
 
 testToOperation =
-    [ TestLabel "" $ TestCase $ assertEqual "toInstruction 2" (Mult Position Position) (toOperation 2)
-    , TestLabel "" $ TestCase $ assertEqual "toInstruction 1002" (Mult Position Immediate) (toOperation 1002)
+    [ TestLabel "" $ TestCase $ assertEqual "toInstruction 2" (Mult Position Position Position) (toOperation 2)
+    , TestLabel "" $ TestCase $ assertEqual "toInstruction 1002" (Mult Position Immediate Position) (toOperation 1002)
     ]
 
 
@@ -39,9 +38,9 @@ testGetValue =
 
 
 testExecuteInstruction =
-    [ TestLabel "" $ TestCase $ assertEqual "" (ic1 { _map = asMap [2,4,4,5,99,9801], currentIndex = 4}) (executeInstruction (Mult Position Position) ic1)
-    , TestLabel "" $ TestCase $ assertEqual "" (ic2 {_map = asMap [2,0,0,0,99], currentIndex = 4}) (executeInstruction (Add Position Position) ic2)
-    , TestLabel "" $ TestCase $ assertEqual "" (ic3 {_map = asMap [3,9,8,9,10,9,4,9,99,8,8], currentIndex = 2, inputStrip = []}) (executeInstruction (ReadFromInput) ic3)
+    [ TestLabel "" $ TestCase $ assertEqual "" (ic1 { _map = asMap [2,4,4,5,99,9801], currentIndex = 4}) (executeInstruction (Mult Position Position Position) ic1)
+    , TestLabel "" $ TestCase $ assertEqual "" (ic2 {_map = asMap [2,0,0,0,99], currentIndex = 4}) (executeInstruction (Add Position Position Position) ic2)
+    , TestLabel "" $ TestCase $ assertEqual "" (ic3 {_map = asMap [3,9,8,9,10,9,4,9,99,8,8], currentIndex = 2, inputStrip = []}) (executeInstruction (ReadFromInput Position) ic3)
     ]
     
 
