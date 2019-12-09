@@ -7,7 +7,7 @@ import System.IO.Unsafe (unsafePerformIO)
 
 import IntCodeInterpreter
     ( IntCode(..)
-    , Mode(..)
+    , ExecutionState(..)
     , process
     , initIntCode
     , values
@@ -56,7 +56,7 @@ feedbackLoop (ic:ics) lastAmpLastOutput =
         out = outputStrip ic'
         ic'' = flushOutput ic'
     in
-        case mode ic' of
+        case executionState ic' of
             Halted -> feedbackLoop ics out
             WaitingForInput -> feedbackLoop (ics ++ [ic'']) out
 

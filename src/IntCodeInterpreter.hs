@@ -9,7 +9,6 @@ import Control.Arrow ((&&&))
 import Data.Maybe (listToMaybe, fromMaybe)
 
 
--- Makeshift Mutable array
 data ParameterMode = Position | Immediate | Relative deriving (Show, Eq)
 
 
@@ -17,7 +16,7 @@ toParameterMode :: Char -> ParameterMode
 toParameterMode '0' = Position
 toParameterMode '1' = Immediate
 toParameterMode '2' = Relative
-toParameterMode _   = error "Incorrect Parameter Mode"
+toParameterMode _   = error "Incorrect Parameter ExecutionState"
 
 
 data Operation
@@ -38,8 +37,8 @@ toOperation :: Int -> Operation
 toOperation i =
     let
         oc = i `mod` 100
-        parameterModes = show $ i `div` 100
-        padedParameterModes = reverse $ "0000" ++ parameterModes
+        parameterExecutionStates = show $ i `div` 100
+        padedParameterModes = reverse $ "0000" ++ parameterExecutionStates
         pms = map toParameterMode padedParameterModes
         pm1 = pms !! 0
         pm2 = pms !! 1
@@ -58,116 +57,116 @@ toOperation i =
             99 -> Halt
 
 
-data Mode = Process | WaitingForInput | Halted deriving (Show, Eq)
+data ExecutionState = Processing | WaitingForInput | Halted deriving (Show, Eq)
 
 data IntCode = IntCode
-    { _map :: M.Map Int Int
-    , currentIndex :: Int
+    { memoryStrip :: M.Map Int Int
+    , instructionPointer :: Int
     , inputStrip :: [Int]
     , outputStrip :: [Int]
-    , mode :: Mode
+    , executionState :: ExecutionState
     , relativeBase :: Int
     } deriving (Show, Eq)
 
 
 (!!!) :: IntCode -> Int -> Int
-ic !!! idx = _map ic M.! idx
+ic !!! idx = memoryStrip ic M.! idx
 
 
 getValue :: ParameterMode -> IntCode -> Int -> Int
-getValue Position ic@IntCode{..} idx = fromMaybe 0 $ _map M.!? (_map M.! idx)
-getValue Relative ic@IntCode{..} idx = fromMaybe 0 $ _map M.!? ((_map M.! idx) + relativeBase)
-getValue Immediate ic@IntCode{..} idx = _map M.! idx
+getValue Position ic@IntCode{..} idx = fromMaybe 0 $ memoryStrip M.!? (memoryStrip M.! idx)
+getValue Relative ic@IntCode{..} idx = fromMaybe 0 $ memoryStrip M.!? ((memoryStrip M.! idx) + relativeBase)
+getValue Immediate ic@IntCode{..} idx = memoryStrip M.! idx
 
 
 getAddress :: ParameterMode -> IntCode -> Int -> Int
-getAddress Position ic@IntCode{..} idx = _map M.! idx
-getAddress Relative ic@IntCode{..} idx = relativeBase + _map M.! idx
+getAddress Position ic@IntCode{..} idx = memoryStrip M.! idx
+getAddress Relative ic@IntCode{..} idx = relativeBase + memoryStrip M.! idx
 
 
 values :: IntCode -> [Int]
-values = M.elems . _map
+values = M.elems . memoryStrip
 
 
 executeInstruction :: Operation -> IntCode -> IntCode
 executeInstruction (Add pm1 pm2 pm3) ic@IntCode{..} = ic
-    { _map = M.alter (\_ -> Just (p1 + p2)) ri _map
-    , currentIndex = currentIndex + 4
-    , mode = Process
+    { memoryStrip = M.alter (\_ -> Just (p1 + p2)) ri memoryStrip
+    , instructionPointer = instructionPointer + 4
+    , executionState = Processing
     } where
-        p1 = getValue pm1 ic (currentIndex + 1)
-        p2 = getValue pm2 ic (currentIndex + 2)
-        ri = getAddress pm3 ic (currentIndex + 3)
+        p1 = getValue pm1 ic (instructionPointer + 1)
+        p2 = getValue pm2 ic (instructionPointer + 2)
+        ri = getAddress pm3 ic (instructionPointer + 3)
 executeInstruction (Mult pm1 pm2 pm3) ic@IntCode{..} = ic
-    { _map = M.alter (\_ -> Just (p1 * p2)) ri _map
-    , currentIndex = currentIndex + 4
-    , mode = Process
+    { memoryStrip = M.alter (\_ -> Just (p1 * p2)) ri memoryStrip
+    , instructionPointer = instructionPointer + 4
+    , executionState = Processing
     } where
-        p1 = getValue pm1 ic (currentIndex + 1)
-        p2 = getValue pm2 ic (currentIndex + 2)
-        ri = getAddress pm3 ic (currentIndex + 3)
+        p1 = getValue pm1 ic (instructionPointer + 1)
+        p2 = getValue pm2 ic (instructionPointer + 2)
+        ri = getAddress pm3 ic (instructionPointer + 3)
 executeInstruction (ReadFromInput pm1) ic@IntCode{..} =
     if null inputStrip then
-        ic {mode = WaitingForInput}
+        ic {executionState = WaitingForInput}
     else
         ic
-            { _map = M.alter (\_ -> Just (head $ inputStrip)) ri _map
-            , currentIndex = currentIndex + 2
+            { memoryStrip = M.alter (\_ -> Just (head $ inputStrip)) ri memoryStrip
+            , instructionPointer = instructionPointer + 2
             , inputStrip = tail inputStrip
-            , mode = Process
+            , executionState = Processing
             }
-    where ri = getAddress pm1 ic (currentIndex + 1)
+    where ri = getAddress pm1 ic (instructionPointer + 1)
 executeInstruction (WriteToOutput pm1) ic@IntCode{..} = ic
-    { currentIndex = currentIndex + 2
+    { instructionPointer = instructionPointer + 2
     , outputStrip = p1 : outputStrip
-    , mode = Process
+    , executionState = Processing
     } where
-        p1 = getValue pm1 ic (currentIndex + 1)
+        p1 = getValue pm1 ic (instructionPointer + 1)
 executeInstruction (JumpIfTrue pm1 pm2) ic@IntCode{..} = ic
-    { currentIndex = if p1 /= 0 then p2 else (currentIndex + 3)
-    , mode = Process
+    { instructionPointer = if p1 /= 0 then p2 else (instructionPointer + 3)
+    , executionState = Processing
     } where
-        p1 = getValue pm1 ic (currentIndex + 1)
-        p2 = getValue pm2 ic (currentIndex + 2)
+        p1 = getValue pm1 ic (instructionPointer + 1)
+        p2 = getValue pm2 ic (instructionPointer + 2)
 executeInstruction (JumpIfFalse pm1 pm2) ic@IntCode{..} = ic
-    { currentIndex = if p1 == 0 then p2 else (currentIndex + 3)
-    , mode = Process
+    { instructionPointer = if p1 == 0 then p2 else (instructionPointer + 3)
+    , executionState = Processing
     } where
-        p1 = getValue pm1 ic (currentIndex + 1)
-        p2 = getValue pm2 ic (currentIndex + 2)
+        p1 = getValue pm1 ic (instructionPointer + 1)
+        p2 = getValue pm2 ic (instructionPointer + 2)
 executeInstruction (LessThan pm1 pm2 pm3) ic@IntCode{..} = ic
-    { _map = M.alter (\_ -> Just (if p1 < p2 then 1 else 0)) ri _map
-    , currentIndex = currentIndex + 4
-    , mode = Process
+    { memoryStrip = M.alter (\_ -> Just (if p1 < p2 then 1 else 0)) ri memoryStrip
+    , instructionPointer = instructionPointer + 4
+    , executionState = Processing
     } where
-        p1 = getValue pm1 ic (currentIndex + 1)
-        p2 = getValue pm2 ic (currentIndex + 2)
-        ri = getAddress pm3 ic (currentIndex + 3)
+        p1 = getValue pm1 ic (instructionPointer + 1)
+        p2 = getValue pm2 ic (instructionPointer + 2)
+        ri = getAddress pm3 ic (instructionPointer + 3)
 executeInstruction (Equals pm1 pm2 pm3) ic@IntCode{..} = ic
-    { _map = M.alter (\_ -> Just (if p1 == p2 then 1 else 0)) ri _map
-    , currentIndex = currentIndex + 4
-    , mode = Process
+    { memoryStrip = M.alter (\_ -> Just (if p1 == p2 then 1 else 0)) ri memoryStrip
+    , instructionPointer = instructionPointer + 4
+    , executionState = Processing
     } where
-        p1 = getValue pm1 ic (currentIndex + 1)
-        p2 = getValue pm2 ic (currentIndex + 2)
-        ri = getAddress pm3 ic (currentIndex + 3)
+        p1 = getValue pm1 ic (instructionPointer + 1)
+        p2 = getValue pm2 ic (instructionPointer + 2)
+        ri = getAddress pm3 ic (instructionPointer + 3)
 executeInstruction Halt ic@IntCode{..} = ic
-    { mode = Halted
-    , currentIndex = currentIndex + 1
+    { executionState = Halted
+    , instructionPointer = instructionPointer + 1
     }
 executeInstruction (AdjustRelativeBase pm1) ic@IntCode{..} = ic
     { relativeBase = relativeBase + adjustmentValue
-    , currentIndex = currentIndex + 2
-    } where adjustmentValue = getValue pm1 ic (currentIndex + 1)
+    , instructionPointer = instructionPointer + 2
+    } where adjustmentValue = getValue pm1 ic (instructionPointer + 1)
 
 
 initIntCode :: [Int] -> [Int] -> IntCode
 initIntCode inp icStrip = IntCode
-    { _map = M.fromList $ zip [0,1..] icStrip
-    , currentIndex = 0
+    { memoryStrip = M.fromList $ zip [0,1..] icStrip
+    , instructionPointer = 0
     , inputStrip = inp
     , outputStrip = []
-    , mode = Process
+    , executionState = Processing
     , relativeBase = 0
     }
 
@@ -176,11 +175,11 @@ initIntCode inp icStrip = IntCode
 process :: IntCode -> IntCode
 process intMap =
     let
-        idx =  currentIndex intMap
+        idx =  instructionPointer intMap
         operation = toOperation (intMap !!! idx)
         ic = executeInstruction operation intMap
     in
-        case mode ic of 
+        case executionState ic of 
             Halted -> ic
             WaitingForInput -> ic
             otherwise -> process $ ic

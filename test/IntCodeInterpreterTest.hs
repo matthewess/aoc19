@@ -4,7 +4,7 @@ import IntCodeInterpreter
     ( Operation(..)
     , ParameterMode(..)
     , IntCode(..)
-    , Mode(..)
+    , ExecutionState(..)
     , toOperation
     , initIntCode
     , getValue
@@ -43,19 +43,19 @@ testGetValue =
 
 testExecuteInstruction =
     [ TestLabel "" $ TestCase $ assertEqual ""
-        (ic1 { _map = asMap [2,4,4,5,99,9801], currentIndex = 4})
+        (ic1 { memoryStrip = asMap [2,4,4,5,99,9801], instructionPointer = 4})
         (executeInstruction (Mult Position Position Position) ic1)
     , TestLabel "" $ TestCase $ assertEqual ""
-        (ic2 {_map = asMap [2,0,0,0,99], currentIndex = 4})
+        (ic2 {memoryStrip = asMap [2,0,0,0,99], instructionPointer = 4})
         (executeInstruction (Add Position Position Position) ic2)
     , TestLabel "" $ TestCase $ assertEqual ""
-        (ic3 {_map = asMap [3,9,8,9,10,9,4,9,99,8,8], currentIndex = 2, inputStrip = []})
+        (ic3 {memoryStrip = asMap [3,9,8,9,10,9,4,9,99,8,8], instructionPointer = 2, inputStrip = []})
         (executeInstruction (ReadFromInput Position) ic3)
     , TestLabel "" $ TestCase $ assertEqual ""
         ic4
-            { _map = M.fromList $ (zip [0..] [109,1,204,-1,1001,100,1,100,1008,100,16,101,1006,101,0,99]) ++ [(100,2),(101,0)]
+            { memoryStrip = M.fromList $ (zip [0..] [109,1,204,-1,1001,100,1,100,1008,100,16,101,1006,101,0,99]) ++ [(100,2),(101,0)]
             , relativeBase = 2
-            , currentIndex = 0
+            , instructionPointer = 0
             , outputStrip = [1,109]
             }
         ( executeInstruction (JumpIfFalse Position Immediate)
@@ -76,18 +76,18 @@ testExecuteInstruction =
 testProcess =
     [ TestLabel "" $ TestCase $ assertEqual ""
         ic4
-            { _map = M.fromList $ (zip [0..] [109,1,204,-1,1001,100,1,100,1008,100,16,101,1006,101,0,99]) ++ [(100,16),(101,1)]
+            { memoryStrip = M.fromList $ (zip [0..] [109,1,204,-1,1001,100,1,100,1008,100,16,101,1006,101,0,99]) ++ [(100,16),(101,1)]
             , relativeBase = 16
-            , currentIndex = 16
+            , instructionPointer = 16
             , outputStrip = reverse [109,1,204,-1,1001,100,1,100,1008,100,16,101,1006,101,0,99]
-            , mode = Halted
+            , executionState = Halted
             }
         (process ic4)
     , TestLabel "" $ TestCase $ assertEqual ""
-        ic5 {_map = asMap [1102,34915192,34915192,7,4,7,99,1219070632396864], outputStrip = [1219070632396864], currentIndex = 7, mode = Halted}
+        ic5 {memoryStrip = asMap [1102,34915192,34915192,7,4,7,99,1219070632396864], outputStrip = [1219070632396864], instructionPointer = 7, executionState = Halted}
         (process ic5)
     , TestLabel "" $ TestCase $ assertEqual ""
-        ic5 {_map = asMap [104,1125899906842624,99], outputStrip = [1125899906842624], currentIndex = 3, mode = Halted}
+        ic5 {memoryStrip = asMap [104,1125899906842624,99], outputStrip = [1125899906842624], instructionPointer = 3, executionState = Halted}
         (process $ initIntCode [] [104,1125899906842624,99])
     ]
     
