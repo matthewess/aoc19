@@ -10,6 +10,7 @@ import D06UniversalOrbitMapTest (d06Tests)
 import D07AmplificatoinCircuitTest (d07Tests)
 import D08SpaceImageFormatTest (d08Tests)
 import D09SensorBoostTest (d09Tests)
+import D10MonitoringStationTest (d10Tests)
 
 
 allTests :: Test
@@ -24,6 +25,7 @@ allTests = TestList $
     ++ d07Tests
     ++ d08Tests
     ++ d09Tests
+    ++ d10Tests
     
 
 main :: IO Counts
